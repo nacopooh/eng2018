@@ -3,97 +3,139 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <title>英語2018 進捗</title>
-
-  <!-- iOS: ホーム画面からフルスクリーン -->
+  <title>英語2018 進捗（Safe Reset）</title>
+  <!-- iOS: フルスクリーン -->
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <meta name="apple-mobile-web-app-title" content="英語2018" />
-
-  <!-- PWA関連（同じフォルダに置く想定。GitHub PagesのサブパスでもOKな相対パス） -->
-  <link rel="manifest" href="manifest.webmanifest" />
   <link rel="apple-touch-icon" href="icon-180.png" />
-
+  <link rel="manifest" href="manifest.webmanifest" />
   <style>
-    :root{
-      --bg:#0b1020; --panel:#121a2e; --muted:#93a4be; --line:#293246;
-      --teal:#22d3ee; --green:#34d399; --ink:#04120a;
-    }
+    :root{--bg:#0b1020;--panel:#121a2e;--muted:#93a4be;--line:#293246;--teal:#22d3ee;--green:#34d399;--ink:#04120a}
     *{box-sizing:border-box}
-    body{margin:0;font-family:system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;background:var(--bg);color:#fff}
+    body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;background:var(--bg);color:#fff}
     header{padding:12px 12px 8px;background:var(--panel);position:sticky;top:0;border-bottom:1px solid var(--line)}
     h1{margin:0 0 4px;font-size:20px}
     #meta{display:flex;gap:12px;color:var(--muted);font-size:12px}
     .tabs{display:flex;gap:8px;margin-top:8px}
     .tab{padding:6px 12px;border-radius:12px;border:1px solid #333;cursor:pointer;font-size:14px}
     .tab.active{background:var(--teal);color:#000;border-color:transparent}
-
     main{padding:12px}
-    .grid{display:flex;flex-wrap:wrap;gap:8px}
-    .lesson{
-      width:62px;height:62px;border-radius:12px;border:1px solid var(--line);
-      background:#162039;display:flex;align-items:center;justify-content:center;
-      font-weight:600;cursor:pointer;user-select:none;transition:transform .06s;
-    }
-    .lesson:active{transform:scale(.98)}
-    .lesson.today{outline:2px solid var(--teal)}
-    .lesson.done{background:var(--green) !important;color:var(--ink) !important;border-color:var(--green)!important}
-
     .panel{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:10px;margin-top:12px}
-    .hint{color:var(--muted);font-size:12px;margin-top:6px}
+    .grid{display:flex;flex-wrap:wrap;gap:8px}
+    .lesson{width:62px;height:62px;border-radius:12px;border:1px solid var(--line);background:#162039;display:flex;align-items:center;justify-content:center;font-weight:600;cursor:pointer;user-select:none}
+    .lesson.today{outline:2px solid var(--teal)}
+    .lesson.done{background:var(--green)!important;color:var(--ink)!important;border-color:var(--green)!important}
+    #log{white-space:pre-wrap;font:12px/1.4 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;color:#ffd6d6;background:#271d1d;border-top:1px solid #412}
   </style>
 </head>
 <body>
   <header>
     <h1>英語2018 進捗</h1>
-    <div id="meta">
-      <div id="today"></div>
-      <div id="progress"></div>
-    </div>
+    <div id="meta"><div id="today"></div><div id="progress"></div></div>
     <div class="tabs">
       <div class="tab active" data-tab="today">今日</div>
       <div class="tab" data-tab="all">一覧</div>
     </div>
   </header>
-
   <main>
-    <section id="panel-today" class="panel">
-      <div class="grid" id="grid-today"></div>
-      <div class="hint">※ 当日中に本数を補充しません。先取り済みは緑のまま表示されます。</div>
-    </section>
-    <section id="panel-all" class="panel" hidden>
-      <div class="grid" id="grid-all"></div>
-    </section>
+    <section id="panel-today" class="panel"><div class="grid" id="grid-today"></div></section>
+    <section id="panel-all" class="panel" hidden><div class="grid" id="grid-all"></div></section>
   </main>
+  <div id="log" hidden></div>
 
- <script>
-  /* …既存のコードはそのまま… */
+  <script>
+  // ===== 安全ガード =====
+  const logEl = document.getElementById('log');
+  function log(msg){ try{ logEl.hidden=false; logEl.textContent += msg + "
+"; }catch(e){} }
+  window.onerror = function(msg, src, line, col, err){ log("ERROR: "+msg+" @"+line+":"+col); };
 
-  // ← render() の中では b.onclick を付けない（dataset.n だけ付ける）
+  // ===== 設定 =====
+  const START = new Date('2025-10-01T00:00:00+09:00');
+  const TOTAL = 240;
+  function quotaFor(d){
+    const day = new Date(d.getFullYear(), d.getMonth(), d.getDate());
+    if (day <= new Date('2025-10-24T00:00:00+09:00')) return 4;
+    if (day <= new Date('2025-12-11T00:00:00+09:00')) return 3;
+    return 0;
+  }
 
-  // ---- ここを追加（イベント委譲）----
+  // ===== 永続化 =====
+  const LS_COMPLETED = 'eigo2018.completed.v1';
+  function getParam(name){ return new URLSearchParams(location.search).get(name); }
+  if (getParam('reset')==='1'){ localStorage.removeItem(LS_COMPLETED); log('localStorage cleared'); }
+
+  function loadArray(k){ try{ return JSON.parse(localStorage.getItem(k) || '[]'); } catch { return []; } }
+  function normalize(arr){ return [...new Set(arr.map(x=>+x).filter(n=>Number.isInteger(n)&&n>=1&&n<=TOTAL))]; }
+  let completed = new Set(normalize(loadArray(LS_COMPLETED)));
+  function save(){ localStorage.setItem(LS_COMPLETED, JSON.stringify([...completed])); }
+
+  // ===== 計画ロジック =====
+  function sumQuotaBefore(date){
+    const end = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+    let cur = new Date(START), sum = 0;
+    while (cur < end && sum < TOTAL){ sum += quotaFor(cur); cur.setDate(cur.getDate()+1); }
+    return Math.min(sum, TOTAL);
+  }
+  function baseBlockFor(date){
+    const startIndex = sumQuotaBefore(date) + 1;
+    const len = Math.min(quotaFor(date), TOTAL - (startIndex - 1));
+    const out = []; for (let i=0;i<len;i++) out.push(startIndex + i); return out;
+  }
+  function todayList(date){
+    const plannedUntilYesterday = sumQuotaBefore(date);
+    const backlog = [];
+    for (let n=1; n<=Math.min(plannedUntilYesterday, TOTAL); n++) if (!completed.has(n)) backlog.push(n);
+    return [...backlog, ...baseBlockFor(date)].slice(0, TOTAL);
+  }
+
+  // ===== UI =====
+  function $(s){ return document.querySelector(s); }
+  function el(tag, cls, text){ const x=document.createElement(tag); if(cls) x.className=cls; if(text!=null) x.textContent=text; return x; }
+  function ymd(d){ return d.toLocaleDateString('ja-JP'); }
+
+  function render(){
+    const now = new Date();
+    $('#today').textContent = ymd(now);
+    $('#progress').textContent = `${completed.size}/${TOTAL}（${Math.round(completed.size*100/TOTAL)}%）`;
+
+    // 今日
+    const gt = $('#grid-today'); gt.innerHTML='';
+    const list = todayList(now);
+    for (const n of list){ const b=el('div', 'lesson today'+(completed.has(n)?' done':''), 'L'+n); b.dataset.n=n; gt.appendChild(b); }
+
+    // 一覧
+    const ga = $('#grid-all');
+    if (!ga.dataset.built){
+      for (let i=1;i<=TOTAL;i++){ const b=el('div','lesson'+(completed.has(i)?' done':''),'L'+i); b.dataset.n=i; ga.appendChild(b); }
+      ga.dataset.built='1';
+    } else {
+      [...ga.children].forEach(b=>{ const n=+b.dataset.n; b.classList.toggle('done', completed.has(n)); });
+    }
+  }
+
+  // クリックはイベント委譲で確実に拾う
   document.addEventListener('click', (ev)=>{
-    const t = ev.target.closest('.lesson');
-    if (!t) return;
-    const n = +t.dataset.n;
-    if (!Number.isInteger(n)) return;
-
-    // 進捗のトグル
+    const t = ev.target.closest('.lesson'); if (!t) return;
+    const n = +t.dataset.n; if (!Number.isInteger(n)) return;
     if (completed.has(n)) completed.delete(n); else completed.add(n);
     save();
-
-    // 同じ番号のタイルを全部反映（今日／一覧 両方）
-    document.querySelectorAll(`.lesson[data-n="${n}"]`).forEach(el=>{
-      el.classList.toggle('done');
-    });
-
-    // 進捗テキスト更新
-    document.querySelector('#progress').textContent =
-      `${completed.size}/${TOTAL}（${Math.round(completed.size*100/TOTAL)}%）`;
+    document.querySelectorAll(`.lesson[data-n="${n}"]`).forEach(x=>x.classList.toggle('done'));
+    $('#progress').textContent = `${completed.size}/${TOTAL}（${Math.round(completed.size*100/TOTAL)}%）`;
   });
 
-  // ---- 既存の DOMContentLoaded 内は render() 呼び出しだけでOK ----
-</script>
+  // タブ切替
+  document.addEventListener('click', (ev)=>{
+    const tab = ev.target.closest('.tab'); if (!tab) return;
+    document.querySelectorAll('.tab').forEach(x=>x.classList.remove('active'));
+    tab.classList.add('active');
+    const which = tab.dataset.tab;
+    $('#panel-today').hidden = which!=='today';
+    $('#panel-all').hidden   = which!=='all';
+  });
 
+  document.addEventListener('DOMContentLoaded', ()=>{ try{ render(); } catch(e){ log('render failed: '+e.message); } });
+  </script>
 </body>
 </html>
