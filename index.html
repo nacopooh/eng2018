@@ -1,141 +1,156 @@
 <!doctype html>
 <html lang="ja">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <title>英語2018 進捗</title>
-  <!-- iOSでホーム画面から全画面にするためのメタタグ -->
-  <meta name="apple-mobile-web-app-capable" content="yes" />
-  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-  <meta name="apple-mobile-web-app-title" content="英語2018" />
-  <link rel="manifest" href="manifest.webmanifest" />
-  <link rel="apple-touch-icon" href="icon-180.png" />
-  <style>
-    body{font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;margin:0;background:#0b1020;color:#fff}
-    header{padding:10px;background:#121a2e;position:sticky;top:0}
-    .tabs{display:flex;gap:8px;margin-top:8px}
-    .tab{padding:4px 10px;border-radius:12px;border:1px solid #333;cursor:pointer}
-    .tab.active{background:#22d3ee;color:#000}
-    main{padding:10px}
-    .lesson{display:inline-block;width:56px;height:56px;margin:4px;border-radius:10px;border:1px solid #293246;background:#162039;color:#fff;text-align:center;line-height:56px;cursor:pointer}
-    .lesson.done{background:#34d399;color:#04120a}
-    .lesson.today{outline:2px solid #22d3ee}
-  </style>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>英語2018 進捗</title>
+<!-- iOSでホーム画面から全画面にするためのメタタグ -->
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+<meta name="apple-mobile-web-app-title" content="英語2018" />
+<link rel="manifest" href="manifest.webmanifest" />
+<link rel="apple-touch-icon" href="icon-180.png" />
+<style>
+body{font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;margin:0;background:#0b1020;color:#fff}
+header{padding:10px;background:#121a2e;position:sticky;top:0}
+.tabs{display:flex;gap:8px;margin-top:8px}
+.tab{padding:4px 10px;border-radius:12px;border:1px solid #333;cursor:pointer}
+.tab.active{background:#22d3ee;color:#000}
+main{padding:10px}
+.lesson{display:inline-block;width:56px;height:56px;margin:4px;border-radius:10px;border:1px solid #293246;background:#162039;color:#fff;text-align:center;line-height:56px;cursor:pointer}
+.lesson.done{background:#34d399;color:#04120a}
+.lesson.today{outline:2px solid #22d3ee}
+</style>
 </head>
 <body>
-  <header>
-    <h1>英語2018 進捗</h1>
-    <div id="today"></div>
-    <div id="progress"></div>
-    <div class="tabs">
-      <div class="tab active" data-tab="today">今日</div>
-      <div class="tab" data-tab="all">一覧</div>
-    </div>
-  </header>
+<header>
+<h1>英語2018 進捗</h1>
+<div id="today"></div>
+<div id="progress"></div>
+<div class="tabs">
+<div class="tab active" data-tab="today">今日</div>
+<div class="tab" data-tab="all">一覧</div>
+</div>
+</header>
 
-  <main>
-    <section id="panel-today"></section>
-    <section id="panel-all" hidden></section>
-  </main>
 
-  <script>
-  const START = new Date('2025-10-01T00:00:00+09:00');
-  const TOTAL = 240;
-  const LS_COMPLETED = 'eigo2018.completed.v1';
+<main>
+<section id="panel-today"></section>
+<section id="panel-all" hidden></section>
+</main>
 
-  // === 配分（予定）ロジック ===
-  function quotaFor(d){
-    const day = new Date(d.getFullYear(), d.getMonth(), d.getDate());
-    if (day <= new Date('2025-10-24T00:00:00+09:00')) return 4;
-    if (day <= new Date('2025-12-11T00:00:00+09:00')) return 3;
-    return 0;
-  }
-  function sumQuotaBefore(date){
-    // START から date の前日までの予定本数合計
-    const end = new Date(date.getFullYear(), date.getMonth(), date.getDate());
-    let cur = new Date(START);
-    let sum = 0;
-    while (cur < end && sum < TOTAL) {
-      sum += quotaFor(cur);
-      cur.setDate(cur.getDate()+1);
-    }
-    return Math.min(sum, TOTAL);
-  }
-  function baseBlockFor(date){
-    // その日の「予定」ブロック（達成状況に依存しない）：連番の連続区間
-    const startIndex = sumQuotaBefore(date) + 1; // 1始まり
-    const len = Math.min(quotaFor(date), TOTAL - (startIndex-1));
-    const out = [];
-    for (let i=0;i<len;i++) out.push(startIndex + i);
-    return out;
-  }
 
-  let completed = new Set(JSON.parse(localStorage.getItem(LS_COMPLETED)||'[]'));
-  function save(){ localStorage.setItem(LS_COMPLETED, JSON.stringify([...completed])); }
-  function toggle(n){ completed.has(n) ? completed.delete(n) : completed.add(n); save(); render(); }
+<script>
+const START = new Date('2025-10-01T00:00:00+09:00');
+const TOTAL = 240;
+const LS_COMPLETED = 'eigo2018.completed.v1';
+// === 配分（予定）ロジック ===
+function quotaFor(d){
+const day = new Date(d.getFullYear(), d.getMonth(), d.getDate());
+if (day <= new Date('2025-10-24T00:00:00+09:00')) return 4;
+if (day <= new Date('2025-12-11T00:00:00+09:00')) return 3;
+return 0;
+}
+function sumQuotaBefore(date){
+// START から date の前日までの予定本数合計
+const end = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+let cur = new Date(START);
+let sum = 0;
+while (cur < end && sum < TOTAL) {
+sum += quotaFor(cur);
+cur.setDate(cur.getDate()+1);
+}
+return Math.min(sum, TOTAL);
+}
+function baseBlockFor(date){
+// その日の「予定」ブロック（達成状況に依存しない）：連番の連続区間
+const startIndex = sumQuotaBefore(date) + 1; // 1始まり
+const len = Math.min(quotaFor(date), TOTAL - (startIndex-1));
+const out = [];
+for (let i=0;i<len;i++) out.push(startIndex + i);
+return out;
+}
+let completed = new Set(JSON.parse(localStorage.getItem(LS_COMPLETED)||'[]'));
+function ymd(d){ return d.toLocaleDateString('sv-SE'); } // YYYY-MM-DD
 
-  function ymd(d){ return d.toLocaleDateString('sv-SE'); } // YYYY-MM-DD
 
-  // === 今日リスト：予定＋「昨日の未完だけ」持越し（当日中の補充はしない）
-  function todayList(date){
-    const todayBase = baseBlockFor(date);
-    const y = new Date(date); y.setDate(date.getDate()-1);
-    const yBase = baseBlockFor(y);
-    const carry = yBase.filter(n => !completed.has(n));
-    // 昨日が START より前なら carry は空
-    return [...carry, ...todayBase].slice(0, TOTAL);
-  }
+// === 今日リスト：予定＋「昨日の未完だけ」持越し（当日中の補充はしない）
+function todayList(date){
+// 仕様：過去にやっていない分は「全部」持ち越し＋当日の予定
+// 1) 昨日までの計画総数を求める（開始日から昨日までの累計）
+const plannedUntilYesterday = sumQuotaBefore(date); // 例：10/4なら L1..L16 が対象
 
-  // === 描画 ===
-  function render(){
-    const now = new Date();
-    document.getElementById('today').textContent = now.toLocaleDateString('ja-JP');
-    const done = completed.size; const pct = Math.round(done*100/TOTAL);
-    document.getElementById('progress').textContent = `${done}/${TOTAL}（${pct}%）`;
 
-    // 今日（予定＋昨日未完のみ）
-    const list = todayList(now);
-    const todaySec = document.getElementById('panel-today'); todaySec.innerHTML='';
-    list.forEach(n=>{
-      const b = document.createElement('div');
-      b.className = 'lesson today' + (completed.has(n) ? ' done':'' );
-      b.textContent = 'L'+n;
-      b.onclick = ()=>toggle(n);
-      todaySec.appendChild(b);
-    });
+// 2) バックログ＝L1..plannedUntilYesterday のうち未完
+const backlog = [];
+for (let n = 1; n <= Math.min(plannedUntilYesterday, TOTAL); n++){
+if (!completed.has(n)) backlog.push(n);
+}
 
-    // 一覧
-    const allSec = document.getElementById('panel-all');
-    if (!allSec.dataset.built){
-      for(let i=1;i<=TOTAL;i++){
-        const b=document.createElement('div');
-        b.className='lesson';
-        b.dataset.n=i;
-        b.textContent='L'+i;
-        b.onclick=()=>toggle(i);
-        allSec.appendChild(b);
-      }
-      allSec.dataset.built='1';
-    }
-    [...allSec.children].forEach(b=>{
-      const n=+b.dataset.n;
-      b.classList.toggle('done', completed.has(n));
-    });
-  }
 
-  // タブ切替
-  document.querySelectorAll('.tab').forEach(t=>{
-    t.addEventListener('click', ()=>{
-      document.querySelectorAll('.tab').forEach(x=>x.classList.remove('active'));
-      t.classList.add('active');
-      const tab = t.dataset.tab;
-      document.getElementById('panel-today').hidden = tab!=='today';
-      document.getElementById('panel-all').hidden   = tab!=='all';
-    });
-  });
+// 3) 当日の予定ブロック（達成状況に依存しない連番）
+const todayBase = baseBlockFor(date);
 
-  // SWは未使用（軽量運用）
-  render();
+
+// 4) 連結して返す（総数は最大 TOTAL まで）
+return [...backlog, ...todayBase].slice(0, TOTAL);
+}
+
+
+// === 描画 ===
+function render(){
+const now = new Date();
+document.getElementById('today').textContent = now.toLocaleDateString('ja-JP');
+const done = completed.size; const pct = Math.round(done*100/TOTAL);
+document.getElementById('progress').textContent = `${done}/${TOTAL}（${pct}%）`;
+
+
+// 今日（予定＋昨日未完のみ）
+const list = todayList(now);
+const todaySec = document.getElementById('panel-today'); todaySec.innerHTML='';
+list.forEach(n=>{
+const b = document.createElement('div');
+b.className = 'lesson today' + (completed.has(n) ? ' done':'' );
+b.textContent = 'L'+n;
+b.onclick = ()=>toggle(n);
+todaySec.appendChild(b);
+});
+
+
+// 一覧
+const allSec = document.getElementById('panel-all');
+if (!allSec.dataset.built){
+for(let i=1;i<=TOTAL;i++){
+const b=document.createElement('div');
+b.className='lesson';
+b.dataset.n=i;
+b.textContent='L'+i;
+b.onclick=()=>toggle(i);
+allSec.appendChild(b);
+}
+allSec.dataset.built='1';
+}
+[...allSec.children].forEach(b=>{
+const n=+b.dataset.n;
+b.classList.toggle('done', completed.has(n));
+});
+}
+
+
+// タブ切替
+document.querySelectorAll('.tab').forEach(t=>{
+t.addEventListener('click', ()=>{
+document.querySelectorAll('.tab').forEach(x=>x.classList.remove('active'));
+t.classList.add('active');
+const tab = t.dataset.tab;
+document.getElementById('panel-today').hidden = tab!=='today';
+document.getElementById('panel-all').hidden = tab!=='all';
+});
+});
+
+
+// SWは未使用（軽量運用）
+render();
 </script>
 </body>
 </html>
