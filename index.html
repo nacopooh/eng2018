@@ -66,123 +66,34 @@
     </section>
   </main>
 
-  <script>
-    // ===== 設定 =====
-    const START = new Date('2025-10-01T00:00:00+09:00'); // 開始日
-    const TOTAL = 240;                                   // 総レッスン数
-    // 10/1–10/24:4本/日, 10/25–12/11:3本/日（必要なら調整）
-    function quotaFor(d){
-      const day = new Date(d.getFullYear(), d.getMonth(), d.getDate());
-      if (day <= new Date('2025-10-24T00:00:00+09:00')) return 4;
-      if (day <= new Date('2025-12-11T00:00:00+09:00')) return 3;
-      return 0;
-    }
+ <script>
+  /* …既存のコードはそのまま… */
 
-    // ===== 永続化（localStorage） =====
-    const LS_COMPLETED = 'eigo2018.completed.v1';
-    let completed = new Set(normalize(loadArray(LS_COMPLETED)));
-    function loadArray(k){ try{ return JSON.parse(localStorage.getItem(k) || '[]'); }catch{ return []; } }
-    function save(){ localStorage.setItem(LS_COMPLETED, JSON.stringify([...completed])); }
-    function normalize(arr){ // '5' → 5 / 範囲外除外
-      return [...new Set(arr.map(x=>+x).filter(n=>Number.isInteger(n) && n>=1 && n<=TOTAL))];
-    }
+  // ← render() の中では b.onclick を付けない（dataset.n だけ付ける）
 
-    // ===== 計画ロジック =====
-    // 開始日から「前日」までの予定総数（例：10/4なら16）
-    function sumQuotaBefore(date){
-      const end = new Date(date.getFullYear(), date.getMonth(), date.getDate());
-      let cur = new Date(START), sum = 0;
-      while (cur < end && sum < TOTAL){ sum += quotaFor(cur); cur.setDate(cur.getDate()+1); }
-      return Math.min(sum, TOTAL);
-    }
-    // 当日の予定ブロック（達成状況に依存しない連番）
-    function baseBlockFor(date){
-      const startIndex = sumQuotaBefore(date) + 1;
-      const len = Math.min(quotaFor(date), TOTAL - (startIndex - 1));
-      const out = [];
-      for (let i=0;i<len;i++) out.push(startIndex + i);
-      return out;
-    }
-    // 表示用：過去未完ぜんぶ + 今日の予定（当日中は補充しない）
-    function todayList(date){
-      const plannedUntilYesterday = sumQuotaBefore(date);
-      const backlog = [];
-      for (let n = 1; n <= Math.min(plannedUntilYesterday, TOTAL); n++){
-        if (!completed.has(n)) backlog.push(n);
-      }
-      const todayBase = baseBlockFor(date);
-      return [...backlog, ...todayBase].slice(0, TOTAL);
-    }
+  // ---- ここを追加（イベント委譲）----
+  document.addEventListener('click', (ev)=>{
+    const t = ev.target.closest('.lesson');
+    if (!t) return;
+    const n = +t.dataset.n;
+    if (!Number.isInteger(n)) return;
 
-    // ===== UI =====
-    function $(sel){ return document.querySelector(sel); }
-    function el(tag, cls, text){ const x = document.createElement(tag); if(cls) x.className=cls; if(text!=null) x.textContent=text; return x; }
-    function ymd(d){ return d.toLocaleDateString('ja-JP'); }
+    // 進捗のトグル
+    if (completed.has(n)) completed.delete(n); else completed.add(n);
+    save();
 
-    function render(){
-      // 進捗表示
-      const now = new Date();
-      $('#today').textContent = ymd(now);
-      $('#progress').textContent = `${completed.size}/${TOTAL}（${Math.round(completed.size*100/TOTAL)}%）`;
-
-      // 今日
-      const list = todayList(now);
-      const gt = $('#grid-today'); gt.innerHTML='';
-      for (const n of list){
-        const b = el('div', 'lesson today' + (completed.has(n)?' done':''), 'L'+n);
-        b.dataset.n = n;
-        b.onclick = onToggle;
-        gt.appendChild(b);
-      }
-
-      // 一覧（初回だけ生成→以降はクラス更新）
-      const ga = $('#grid-all');
-      if (!ga.dataset.built){
-        for (let i=1;i<=TOTAL;i++){
-          const b = el('div', 'lesson' + (completed.has(i)?' done':''), 'L'+i);
-          b.dataset.n = i;
-          b.onclick = onToggle;
-          ga.appendChild(b);
-        }
-        ga.dataset.built = '1';
-      } else {
-        [...ga.children].forEach(b=>{
-          const n = +b.dataset.n;
-          b.classList.toggle('done', completed.has(n));
-        });
-      }
-    }
-
-    function onToggle(e){
-      const n = +e.currentTarget.dataset.n;
-      if (completed.has(n)) completed.delete(n); else completed.add(n);
-      save();
-      // 見た目を即時反映（全再描画でもOKだが軽量に反映）
-      e.currentTarget.classList.toggle('done');
-      // 一覧側/今日側の相方も反映
-      const selector = `.lesson[data-n="${n}"]`;
-      document.querySelectorAll(selector).forEach(x=>{
-        if (x!==e.currentTarget) x.classList.toggle('done');
-      });
-      // 上部の進捗テキスト更新
-      $('#progress').textContent = `${completed.size}/${TOTAL}（${Math.round(completed.size*100/TOTAL)}%）`;
-    }
-
-    // タブ切替
-    document.addEventListener('DOMContentLoaded', ()=>{
-      document.querySelectorAll('.tab').forEach(t=>{
-        t.addEventListener('click', ()=>{
-          document.querySelectorAll('.tab').forEach(x=>x.classList.remove('active'));
-          t.classList.add('active');
-          const tab = t.dataset.tab;
-          $('#panel-today').hidden = tab!=='today';
-          $('#panel-all').hidden   = tab!=='all';
-        });
-      });
-      render();
+    // 同じ番号のタイルを全部反映（今日／一覧 両方）
+    document.querySelectorAll(`.lesson[data-n="${n}"]`).forEach(el=>{
+      el.classList.toggle('done');
     });
 
-    // Service Workerは登録しない（起動軽量）
-  </script>
+    // 進捗テキスト更新
+    document.querySelector('#progress').textContent =
+      `${completed.size}/${TOTAL}（${Math.round(completed.size*100/TOTAL)}%）`;
+  });
+
+  // ---- 既存の DOMContentLoaded 内は render() 呼び出しだけでOK ----
+</script>
+
 </body>
 </html>
