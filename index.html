@@ -47,8 +47,7 @@
   <script>
   // ===== 安全ガード =====
   const logEl = document.getElementById('log');
-  function log(msg){ try{ logEl.hidden=false; logEl.textContent += msg + "
-"; }catch(e){} }
+  function log(msg){ try{ logEl.hidden=false; logEl.textContent += msg + "\n"; }catch(e){} }
   window.onerror = function(msg, src, line, col, err){ log("ERROR: "+msg+" @"+line+":"+col); };
 
   // ===== 設定 =====
